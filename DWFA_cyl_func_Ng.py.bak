@@ -74,12 +74,12 @@ def FindMode(a,b,n,mu,epsilon,Nmode,k):
      
      if (Dkmax>0.) and (Dkmin<0.):
         RootEqn[CurrentNmode]=opt.fsolve(DispersionEqn,k,args=(a,b,n,mu,epsilon),xtol=1e-6)
-        print((k, 'pos. sl', CurrentNmode, Dkmax, Dkmin, RootEqn[CurrentNmode]))
+        print k, 'pos. sl', CurrentNmode, Dkmax, Dkmin, RootEqn[CurrentNmode]
         CurrentNmode=CurrentNmode+1
      
      if (Dkmax<0.) and (Dkmin>0.):
         RootEqn[CurrentNmode]=opt.fsolve(DispersionEqn,k,args=(a,b,n,mu,epsilon), xtol=1e-6)
-        print((k, 'neg. sl', CurrentNmode, Dkmax, Dkmin, RootEqn[CurrentNmode]))
+        print k, 'neg. sl', CurrentNmode, Dkmax, Dkmin, RootEqn[CurrentNmode]
         CurrentNmode=CurrentNmode+1
      
      k=k+Stepk
@@ -92,7 +92,7 @@ def FindMode(a,b,n,mu,epsilon,Nmode,k):
 
       while (np.any(np.abs(DispersionEqn(RootEqn+delta,a,b,n,mu,epsilon)-DispersionEqn(RootEqn,a,b,n,mu,epsilon)))>1.):#if the difference between two DispersionEqns is not small enough, then make delta smaller
           delta=delta/10.0
-      print(('step for derivative', delta))
+      print 'step for derivative', delta
 # renormalize the field to the charge so units are now V/m/nC
       D_s=(DispersionEqn(RootEqn+delta,a,b,n,mu,epsilon)- \
            DispersionEqn(RootEqn,a,b,n,mu,epsilon))/delta/a # d/dx D(x) in Equation (4.11) in SI units
@@ -107,7 +107,7 @@ def FindMode(a,b,n,mu,epsilon,Nmode,k):
       while (np.any(np.abs(DispersionEqn(RootEqn+delta,a,b,n,mu,epsilon)-DispersionEqn(RootEqn,a,b,n,mu,epsilon)))>1.):
           delta=delta/10.0
 
-      print(('step for derivative', delta))
+      print 'step for derivative', delta
       #NormalizationCGS2SI=qelec*qelec/(a*a)/(4*math.pi*epsilon0)  # Eq 5.3
       D_s=(DispersionEqn(RootEqn+delta,a,b,n,mu,epsilon)- \
            DispersionEqn(RootEqn,a,b,n,mu,epsilon))/delta/a # d/dx D(x) in Equation (4.12) in CGS
@@ -120,14 +120,14 @@ def FindMode(a,b,n,mu,epsilon,Nmode,k):
 # renormalize the field to the charge so units are now V/m/NC
       
 
-   print("----- Summary ------")
-   print(("mode order =",n))
-   print(("Roots:", RootEqn))
-   print(("dDisp:", D_s))
-   print(("Mode Amplitudes:",  RootAmplit))
-   print(("Mode WaveVectors:", RootWavVec))
-   print(("Mode Wavelengths:", 2.*np.pi/RootWavVec))
-   print("--------------------")
+   print "----- Summary ------"
+   print "mode order =",n
+   print "Roots:", RootEqn
+   print "dDisp:", D_s
+   print "Mode Amplitudes:",  RootAmplit
+   print "Mode WaveVectors:", RootWavVec
+   print "Mode Wavelengths:", 2.*np.pi/RootWavVec
+   print "--------------------"
    
    return(RootAmplit, RootWavVec)
 
@@ -173,7 +173,7 @@ def BunchDistrib (Distribution, zz, sigmaz):
    zzmean=np.mean(zz)
    zeval=zz-zzmean;
    dz=np.abs(zz[1]-zz[0])
-   print(("dz:", dz))
+   print "dz:", dz
    MyBunch=Distribution(zeval,sigmaz)
    return(zeval,MyBunch)
 
@@ -205,7 +205,7 @@ def GreenFunction(RootAmplit, RootWavVec, zmin, zmax,Nz):
 #   print "dz:", dz
    Nmode=len(RootAmplit)
    for i in range(Nmode):
-      print((i, RootAmplit[i], RootWavVec[i]))
+      print i, RootAmplit[i], RootWavVec[i]
       WakeGreen=WakeGreen+RootAmplit[i]*(r0*r/(a*a))**n*np.cos(RootWavVec[i]*zz)
    return(zz,WakeGreen)
 
@@ -214,7 +214,7 @@ def Long_GreenFunction(RootAmplit, RootWavVec, r0,r, b, a, n, zmin, zmax,Nz,mu,e
    WakeGreen=0.0*zz
    Nmode=len(RootAmplit)
    for i in range(Nmode):
-      print(('LGreen:', i, RootAmplit, RootWavVec))
+      print 'LGreen:', i, RootAmplit, RootWavVec
       if n>0:
         NormalizationCGS2SI=8.0*qelec/(a*a)*(r0*r/(b*b))**n/(4*math.pi*epsilon0)
         WakeGreen=WakeGreen+NormalizationCGS2SI*RootAmplit[i]*np.cos(RootWavVec[i]*zz)#equation (4.11) in Ng paper
@@ -229,7 +229,7 @@ def Trans_GreenFunction(RootAmplit, RootWavVec, r0,r, b, a, n, zmin, zmax,Nz,mu,
    Nmode=len(RootAmplit)
    F_=np.zeros(Nmode)
    for i in range(Nmode):
-      print((i, RootAmplit[i], RootWavVec[i]))
+      print i, RootAmplit[i], RootWavVec[i]
       #P=P_rg(RootEqn[i],a,b,n)
       #R=R_rg(RootEqn[i],a,b,n)
       NormalizationCGS2SI=qelec*qelec/(a*a)*(r0/a)**n*(r/a)**(n-1)*8.0*n*np.sqrt(epsilon-1.0)/(b/a)**(2.0*n)/(4*math.pi*epsilon0)
@@ -242,7 +242,7 @@ def WakePotential (Distribution, WakeGreen, zz, sigmaz):
    zzmean=np.mean(zz)
    zeval=zz-zzmean;
    dz=np.abs(zz[1]-zz[0])
-   print(("dz:", dz))
+   print "dz:", dz
    MyBunch=Distribution(zeval,sigmaz)
    WakePot=np.convolve(MyBunch,WakeGreen)*dz/cms
    WakePot=WakePot[0:len(zeval)]

@@ -8,31 +8,24 @@ import matplotlib.pyplot as plt
 import math
 import random 
 from matplotlib.colors import LogNorm
-
 from matplotlib import ticker
 formatter = ticker.ScalarFormatter(useMathText=True)
 formatter.set_scientific(True) 
 
-# on MAC OS
-os.environ['PATH'] = os.environ['PATH'] + ':/usr/texbin'
 
 ''' 
 set defaults for nicely-formatted plots
 define handy functions
 '''
 # plotting stuff
-params = {'axes.labelsize': 18,
-          'text.fontsize': 18,
-          'legend.fontsize': 18,
-          'xtick.labelsize': 18,
-          'ytick.labelsize': 18,
-          'text.usetex':True}
           
-rc('text',fontsize=18)
-rc('legend',fontsize=18)
-rc('xtick',labelsize=18)
-rc('ytick',labelsize=18)
-rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
+rc('legend',fontsize=22)
+rc('xtick',labelsize=22)
+rc('ytick',labelsize=22)
+font = {'family' : 'normal',
+        'size'   : 22}
+
+rc('font', **font)
 rc('text', usetex=True)
 
 default_params = dict(nbins = 10,
