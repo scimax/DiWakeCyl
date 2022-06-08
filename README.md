@@ -35,5 +35,5 @@ P. Piot (NIU and Fermilab), J. Wang (NIU), F. Lemery (NIU, now DESY),
 
 ## Citing this work
 
-Please cite this code as [use the tab on the right to genereate bibtex format]:
+Please cite this code as [use the tab on the right to generate bibtex format]:
 P. Piot, F. Lemery, and J. Wang,  DiWakeCyl: a computer program to compute Green's functions for dielectric-lined cylindrical-symmetric waveguides, PYTHON program available from GitHub at  https://github.com/NIUaard/DiWakeCyl 
