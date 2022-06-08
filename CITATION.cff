@@ -7,6 +7,8 @@ authors:
 - family-names: "Francois"
   given-names: "Lemery"
   orcid: "https://orcid.org/0000-0002-3660-1145"
+- family-names: "Jinlong"
+  given-names: "Wang"
 title: "DiWakeCyl: a copmuter program to compute Green's function for dielectric-lined cylindrical-symmetric waveguides"
 version: 1.0.0
 date-released: 2020-06-08
