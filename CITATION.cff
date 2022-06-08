@@ -1,15 +1,15 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 authors:
-- family-names: "Piot"
-  given-names: "Philippe"
+- family-names: "Philippe"
+  given-names: "Piot"
   orcid: "https://orcid.org/0000-0002-4799-292X"
-- family-names: "Francois"
-  given-names: "Lemery"
+- family-names: "Lemery"
+  given-names: "Francois"
   orcid: "https://orcid.org/0000-0002-3660-1145"
-- family-names: "Jinlong"
-  given-names: "Wang"
-title: "DiWakeCyl: a copmuter program to compute Green's function for dielectric-lined cylindrical-symmetric waveguides"
+- family-names: "Wang"
+  given-names: "Jinlong"
+title: "DiWakeCyl: a computer program to compute Green's function for dielectric-lined cylindrical-symmetric waveguides"
 version: 1.0.0
 date-released: 2020-06-08
 url: "https://github.com/NIUaard/DiWakeCyl"
