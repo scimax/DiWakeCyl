@@ -20,7 +20,7 @@ with ELEGANT longitudinal wake element.
 test_Ng.py provide an example of longitudinal wake (monopole) computation along with its
 convoultion with a given charge distribution (in the present case a Gaussian distribution)         
 
-pitz.py produced the Green's function and saved is as an ASTRA-compatible file for use 
+The script pitz.py produced the Green's function and saved is as an ASTRA-compatible file for use 
 in the &wakefield element.This program was employed to perform simulations reported in https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.122.044801 
 
 ## Tests
@@ -31,7 +31,7 @@ associated to the sum of the first four monopole modes.
 
 ## Contributors 
 
-P. Piot (NIU and Fermilab), J. Wang (NIU), F. Lemery (NIU, now DESY), 
+P. Piot (NIU and Fermilab),F. Lemery (NIU, now DESY), J. Wang (formerly at NIU), 
 
 ## Citing this work
 
