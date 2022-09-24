@@ -27,7 +27,7 @@ should produce a plot displaying the Green's function  associated to the sum of 
 
 ## Contributors 
 
-P. Piot (NIU and Fermilab),F. Lemery (NIU, now DESY), J. Wang (formerly at NIU), 
+Philippe Piot (NIU and Fermilab), Francois Lemery (NIU, now DESY), Jilong Wang (formerly at NIU).
 
 ## Citing this work
 
