@@ -13,9 +13,9 @@ The simple implementation in ```test_Ng_long.py``` and ```test_Ng_trans.py``` de
 
 The script ``` MakeWake4Eleg.py``` generate a Green's function formatted to be compatible with ELEGANT longitudinal wake element.  
 
-test_Ng.py provide an example of longitudinal wake (monopole) computation along with its convoultion with a given charge distribution (in the present case a Gaussian distribution)         
+The script ```test_Ng.py``` provides an example of longitudinal wake (monopole) computation along with its convoultion with a given charge distribution (in the present case a Gaussian distribution)         
 
-The script pitz.py produced the Green's function and saved is as an ASTRA-compatible file for use in the &wakefield element.This program was employed to perform simulations reported in https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.122.044801 
+The script ```pitz.py``` produced the Green's function and saved is as an ASTRA-compatible file for use in the &wakefield element.This program was employed to perform simulations reported in https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.122.044801 
 
 ## Tests
 
