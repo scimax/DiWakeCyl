@@ -1,4 +1,6 @@
 # Wakefield in Axi-Symmetric Dielectric-Lined Waveguides
+[![DOI](https://zenodo.org/badge/108283230.svg)](https://zenodo.org/badge/latestdoi/108283230)
+
 ## Synopsis
 
 This set of PYTHON scripts provide a toolkit to compute the Green's function
