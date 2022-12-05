@@ -1,5 +1,5 @@
-from pydefault import *
 from DWFA_cyl_func_Ng import *
+import matplotlib.pyplot as plt
 #from DWFA_cyl_func_08032016 import *
 # structure parameters:
 # becareful Ng switch convention wrt Gai (a>b in Ng!!!)
@@ -26,10 +26,10 @@ r=b
 r0=1.e-3#b
 azimuthal_mode=0  #m=0
 
-RootAmplit, RootWavVec= FindMode(a,b,azimuthal_mode,mu,epsilon,Nmode,.3)
+RootAmplit, RootWavVec= FindMode(a,b,azimuthal_mode,epsilon,Nmode,k_step=.3)
 n=azimuthal_mode
-zGreen, WlGreen = Long_GreenFunction(RootAmplit, RootWavVec, r0,r, b, a, n, zmin, zmax,Nz,mu,epsilon)
-zGreen, WtGreen = Trans_GreenFunction(RootAmplit, RootWavVec, r0,r, b, a, n, zmin, zmax,Nz,mu,epsilon)#(RootAmplit, RootWavVec, r, r0, a, azimuthal_mode, zmin, zmax,Nz)
+zGreen, WlGreen = Long_GreenFunction(RootAmplit, RootWavVec, r0,r, b, a, n, zmin, zmax,Nz,epsilon)
+zGreen, WtGreen = Trans_GreenFunction(RootAmplit, RootWavVec, r0,r, b, a, n, zmin, zmax,Nz,epsilon)#(RootAmplit, RootWavVec, r, r0, a, azimuthal_mode, zmin, zmax,Nz)
 # case of a Gaussian
 zWakePotG, WakePotG_l= WakePotential (BunchDistG, WlGreen, zGreen, sigmaz)
 zWakePotG_t, WakePotG_t= WakePotential (BunchDistG, WtGreen, zGreen, sigmaz)
@@ -46,32 +46,36 @@ BunchG=BunchG*Q
 #dataE1 = np.loadtxt("E1.txt")
 #dataFr1 = np.loadtxt("Fr1.txt")
 # plots 
+plt.style.use("tex.mplstyle")
+plt.style.use("default")
 plt.subplot(211)
 plt.plot (zGreen/sigmaz, -WlGreen,'-',label='Ng')
-plt.ylabel(r'$w_l(r,\zeta)$ (V/m/C)', fontsize=18)
-plt.xlabel(r'$\zeta/$\sigma_z$', fontsize=18)
+plt.ylabel(r'$w_l(r,\zeta)$ (V/m/C)')
+plt.xlabel(r'$\zeta/\sigma_z$')
 #plt.legend(loc='upper center')
 plt.subplot(212)
 plt.plot (zGreen/sigmaz, WtGreen,'-',label='Ng')
 #plt.plot(dataFr1[:,0]*10.0,dataFr1[:,1]*1.e7,label='commercial')
-plt.ylabel(r'$w_t(r,\zeta)$ (V/m/C)', fontsize=18)
-plt.xlabel(r'$\zeta/$\sigma_z$', fontsize=18)
+plt.ylabel(r'$w_t(r,\zeta)$ (V/m/C)')
+plt.xlabel(r'$\zeta/\sigma_z$')
 #plt.legend(loc='upper center')
+plt.tight_layout()
 
 plt.figure()
 plt.subplot(211)
 plt.plot (zBunchG/sigmaz, BunchG/max(BunchG)*max(WakePotG_l),'-')
 plt.plot (zWakePotG/sigmaz, -WakePotG_l,'-')
-plt.ylabel(r'$E(z)$ (V/m)', fontsize=18)
-plt.xlabel(r'$z/\sigma_z$', fontsize=18)
+plt.ylabel(r'$E(z)$ (V/m)')
+plt.xlabel(r'$z/\sigma_z$')
 
 plt.xlim(-4, zmax/sigmaz/2.)
 plt.subplot(212)
 plt.plot (zBunchG/sigmaz, BunchG/max(BunchG)*max(WakePotG_t),'-')
 plt.plot (zWakePotG_t/sigmaz, -WakePotG_t,'-')
-plt.ylabel(r'$F_r(z)$ (eV/m)', fontsize=18)
-plt.xlabel(r'$z/\sigma_z$', fontsize=18)
+plt.ylabel(r'$F_r(z)$ (eV/m)')
+plt.xlabel(r'$z/\sigma_z$')
 plt.xlim(-4, zmax/sigmaz/2.)
+plt.tight_layout()
 
 
 f = open('wake_tmp.dat', 'w')

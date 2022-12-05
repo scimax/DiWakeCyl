@@ -3,7 +3,7 @@ import sys
 from pydefault import *
 from DWFA_cyl_func_Ng import *
 import os
-print sys.argv
+print(sys.argv)
 
 # structure parameters:
 # becareful Ng switch convention wrt Gai (a>b in Ng!!!)
@@ -18,12 +18,12 @@ fout   = sys.argv[7]
 command='cp '+fin+' '+fout
 os.system(command)
 
-print 'argument:'
-print 'inner_radius =', b
-print 'outer_radius =', a
-print 'expsilon_rel =', epsilon
-print 'NumberofModes=', Nmode
-print 'Maximum z pos=', zmax
+print('argument:')
+print('inner_radius =', b)
+print('outer_radius =', a)
+print('expsilon_rel =', epsilon)
+print('NumberofModes=', Nmode)
+print('Maximum z pos=', zmax)
 
 ### initial set that works
 #b = 450e-6
@@ -41,13 +41,13 @@ os.system(command)
 min_t=float(os.popen('sdds2stream '+fin+' -par=min_t').read())
 max_t=float(os.popen('sdds2stream '+fin+' -par=max_t').read())
 
-print 'minimum', min_t
-print 'maximum', max_t
+print('minimum', min_t)
+print('maximum', max_t)
 
 cms=299792458.0
 zmax= cms*np.abs((max_t-min_t))
 
-print 'Maximum z pos=', zmax
+print('Maximum z pos=', zmax)
 
 # compute the Green's function
 Nz=10000
