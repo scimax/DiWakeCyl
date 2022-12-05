@@ -14,7 +14,7 @@ formatter = ticker.ScalarFormatter(useMathText=True)
 formatter.set_scientific(True) 
 
 # on MAC OS
-os.environ['PATH'] = os.environ['PATH'] + ':/usr/texbin'
+# os.environ['PATH'] = os.environ['PATH'] + ':/usr/texbin'
 
 ''' 
 set defaults for nicely-formatted plots
@@ -28,7 +28,7 @@ params = {'axes.labelsize': 18,
           'ytick.labelsize': 18,
           'text.usetex':True}
           
-rc('text',fontsize=18)
+rc('font', size=18)
 rc('legend',fontsize=18)
 rc('xtick',labelsize=18)
 rc('ytick',labelsize=18)

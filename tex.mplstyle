@@ -1,0 +1,8 @@
+text.usetex : True
+axes.labelsize: 18
+font.size: 18
+legend.fontsize: 18
+xtick.labelsize: 18
+ytick.labelsize: 18
+font.family : "serif"
+# axes.formatter.use_mathtext: True

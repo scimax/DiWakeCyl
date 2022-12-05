@@ -1,18 +1,20 @@
-from pydefault import *
+import matplotlib.pyplot as plt
 from DWFA_cyl_func_Ng import *
+from scipy.special import jnp_zeros
+
 #from DWFA_cyl_func_08032016 import *
 # structure parameters:
 # be careful Ng switch convention wrt Gai (a>b in Ng!!!)
 b = 2e-3
 a = 5e-3
 epsilon = 3.0#dielectric constant of the medium
-#mu=200000.0# relative magnetic permeability,Aluminum	1.000022 ;Iron (99.95% pure Fe annealed in H) 200000,Iron (99.8% pure) 5000 from Wikipedia
-mu=1.0000
 
 # bunch length (rms, fwhm, etc.. depends on selected distribution)
 sigmaz=1.e-3
 Q=100.e-9 #? source particle carrying charge Q :100nC
 
+# Start parameter for root finding method
+u_11 = jnp_zeros(1,1)[0]
 
 # number of mode we want to get
 Nmode = 4
@@ -26,10 +28,10 @@ r=b
 r0=1.e-3#b
 azimuthal_mode=1  #m=0
 
-RootAmplit, RootWavVec= FindMode(a,b,azimuthal_mode,mu,epsilon,Nmode,0.1)
+RootAmplit, RootWavVec= FindMode(a,b,azimuthal_mode,epsilon,Nmode,k_0=u_11/(2*np.pi * a))
 n=azimuthal_mode
-zGreen, WlGreen = Long_GreenFunction(RootAmplit, RootWavVec, r0,r, b, a, n, zmin, zmax,Nz,mu,epsilon)
-zGreen, WtGreen = Trans_GreenFunction(RootAmplit, RootWavVec, r0,r, b, a, n, zmin, zmax,Nz,mu,epsilon)#(RootAmplit, RootWavVec, r, r0, a, azimuthal_mode, zmin, zmax,Nz)
+zGreen, WlGreen = Long_GreenFunction(RootAmplit, RootWavVec, r0,r, b, a, n, zmin, zmax,Nz,epsilon)
+zGreen, WtGreen = Trans_GreenFunction(RootAmplit, RootWavVec, r0,r, b, a, n, zmin, zmax,Nz,epsilon)#(RootAmplit, RootWavVec, r, r0, a, azimuthal_mode, zmin, zmax,Nz)
 # case of a Gaussian
 zWakePotG, WakePotG_l= WakePotential (BunchDistG, WlGreen, zGreen, sigmaz)
 zWakePotG_t, WakePotG_t= WakePotential (BunchDistG, WtGreen, zGreen, sigmaz)
@@ -39,16 +41,14 @@ zBunchG, BunchG= BunchDistrib (BunchDistG, zGreen, sigmaz)
 BunchG=BunchG*Q
 
 
-
-
 dataE1 = np.loadtxt("wake_commercial/wake_gai_trans_m=1_1C.txt")
 dataE2 = np.loadtxt("wake_commercial/wake_gai_trans_m=2_1C.txt")
 
 plt.subplot(111)
 plt.plot (zGreen/sigmaz, WtGreen,'-',label='Ng')
 plt.plot(dataE1[:,0]*10.0,dataE1[:,1],'--', label='commercial')
-plt.ylabel(r'$w_t (r,\zeta)$ (V/m/C)', fontsize=18)
-plt.xlabel(r'$\zeta$ (mm)', fontsize=18)
+plt.ylabel(r'$w_t (r,\zeta)$ (V/m/C)')
+plt.xlabel(r'$\zeta$ (mm)')
 plt.legend(loc='upper right')
 
 plt.tight_layout()

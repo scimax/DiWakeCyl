@@ -1,5 +1,5 @@
-from pydefault import *
 from DWFA_cyl_func_Ng import *
+import matplotlib.pyplot as plt
 #from DWFA_cyl_func_08032016 import *
 # structure parameters:
 # becareful Ng switch convention wrt Gai (a>b in Ng!!!)
@@ -26,7 +26,7 @@ r=b
 r0=1.e-3#b
 azimuthal_mode=0  #m=0
 
-RootAmplit, RootWavVec= FindMode(a,b,azimuthal_mode,mu,epsilon,Nmode,0.1)
+RootAmplit, RootWavVec= FindMode(a,b,azimuthal_mode,epsilon,Nmode,k_step=0.1)
 n=azimuthal_mode
 zGreen, WlGreen = Long_GreenFunction(RootAmplit, RootWavVec, r0,r, b, a, n, zmin, zmax,Nz,mu,epsilon)
 zGreen, WtGreen = Trans_GreenFunction(RootAmplit, RootWavVec, r0,r, b, a, n, zmin, zmax,Nz,mu,epsilon)#(RootAmplit, RootWavVec, r, r0, a, azimuthal_mode, zmin, zmax,Nz)
@@ -41,7 +41,7 @@ BunchG=BunchG*Q
 
 
 
-dataE0 = np.loadtxt("wake_gai_long_m=0_1C.txt")
+dataE0 = np.loadtxt("wake_commercial/wake_gai_long_m=0_1C.txt")
 #dataFr0 = np.loadtxt("Fr0.txt")
 #dataE1 = np.loadtxt("E1.txt")
 #dataFr1 = np.loadtxt("Fr1.txt")
