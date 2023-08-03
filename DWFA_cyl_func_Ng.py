@@ -57,6 +57,24 @@ def DispersionEqn(s,a,b,n, epsilon, mu_r=1):
         Rp= Rp_rg(s,a,b,n)
         #return equation (4.12) in  Ng paper
         return (x*x*xi*xi/(n+1.0)-n*(mu_r*epsilon+1.0))*P*R+x*xi*(epsilon*Pp*R+mu_r*Rp*P)
+    
+def dDispersionEqn_dx_n0(s,a,b, epsilon, mu_r=1):
+    '''
+    Derivative of the characteristic equation of the dispersion function w.r.t. x, as required in Eq. (3.9).
+    Only valid for n=0.
+    '''
+    x = s*a
+    xi = b/a
+    xi_x = s*b
+
+    P_0 = P_rg  (s,a,b,0)
+    Pp_0= Pp_rg (s,a,b,0)
+
+    dP_dx = (-spe.j1(x) * spe.y0( xi_x) + spe.y1( x) * spe.j0( xi_x)) +\
+        xi * Pp_0
+    dPp_dx = spe.j1(x) * spe.y1(xi_x) - xi * spe.j0(x) * spe.yvp(1, xi_x) +\
+          -spe.y1( x) * spe.j1(xi_x) + xi * spe.y0(x) * spe.jvp(1, xi_x) 
+    return Pp_0 + x * dPp_dx + xi/(2.0*epsilon) * ( 2 * x * P_0 + x**2 * dP_dx )
 
 def R_rg(x,a,b,n):
     '''
@@ -92,64 +110,122 @@ def heaviside(x):
     '''
     return np.heaviside(x, 0.5)
 
-def FindMode(a,b,n,epsilon,Nmode, k_0=1, k_step=1, mu_r=1.):
+def FindMode(a,b,n,epsilon,Nmode, k_lower= None, k_upper=None, num_k_sampling=50, mu_r=1.):
     '''
+    Parameters
+    ----------
     a: float
-       outer radius of the DLW
+        outer radius of the DLW
     b: float
-       inner radius of the DLW
+        inner radius of the DLW
     n: integer
-       angular mode index (sometimes called *polar* or *azimuthal*)
+        angular mode index (sometimes called *polar* or *azimuthal*)
     epsilon: float
-       permittivity of the dielectric
+        permittivity of the dielectric
     Nmode: int
-       number of modes considered in the wakefield calculation
-    k_0: float
-       Start parameter for the root finding method
-    k_step: float
-       k is a steping parameter that scans through the dispersion
-       equation (smaller k is more precise but lengthier)
+        number of radial modes considered in the wakefield calculation
+    k_lower, k_upper: float, optional
+        lower and upper boundaries of the initial k-space interval for coarse
+        root-finding of the dispersion characteric equation. Default is None.
+        In this case, the initial interval is estimated from the waveguide dimensions.
+    num_k_sampling: int, optional
+        number of sampling points in the initial k-space interval for coarse 
+        root-finding
     mu_r: float, optional
-       relative permeability of the dielectric
+        relative permeability of the dielectric
+
+    Returns
+    -------
+    RootAmplit: ndarray
+        Array of shape (Nmode,), containing the amplitudes for all modes
+        with angular mode index n, and radial mode index from 0 to Nmode (exclusively)
+    RootWavVec:
+        Array of shape (Nmode,), containing the wavevectors for all modes
+        with angular mode index n, and radial mode index from 0 to Nmode (exclusively)
+
+    Notes
+    -----
+    The amplitudes and wavevectors refer to the terms of the sum in Eq. (3.9) or Eq. (5.3),
+    depending on the angular mode index.
+
     '''
     # define internal variable for taking numerical derivative
+    assert b < a   # Ensure that the order of inner and outer radii is correct
 
-    CurrentNmode=0
-    k = k_0
+    #### Goal: Find intervals with sign changes similar to bisection method, but use faster  
+    ####       root-finding method in each interval.
+    from scipy.special import jnp_zeros, jn_zeros
+    u_11 = jnp_zeros(1,1)[0]    # first root of J_1'(x)
+    u_mn = jn_zeros(n, Nmode)[-1]  # N'th root of J_n(x). Mind that this is not the derivative
+
     RootEqn=np.zeros(Nmode)
+    if k_lower is None:
+        # The wavevector must be larger than the one of the fundamental mode of 
+        # a completely filled waveguid
+        k_lower = u_11/a
+    if k_upper is None:
+        # The wavevector of the TM-contribution is always larger than the one of the corresponding
+        # TE-contribution for a given pair (m,n)
+        # multiplied by sqrt(epsilon*mu_r-1.0) to find an upper bound, close to a unfilled waveguide
+        k_upper = math.sqrt((epsilon*mu_r-1.0)) * u_mn/a
 
-    while CurrentNmode < Nmode:
-        Dkmin=DispersionEqn(k*1.,a,b,n,epsilon, mu_r)          #DispersionEqn(x,a,b,n, mu_r,epsilon)
-        Dkmax=DispersionEqn(k+k_step,a,b,n,epsilon, mu_r)
+    k_samples = np.linspace(k_lower, k_upper, num_k_sampling)
+    num_sign_changes = 0
+    Dk_values = DispersionEqn(k_samples, a, b , n, epsilon, mu_r)
 
-        if (Dkmax>0.) and (Dkmin<0.):
-            RootEqn[CurrentNmode]=opt.fsolve(DispersionEqn,k,args=(a,b,n,epsilon, mu_r),xtol=1e-6)
-            logger.debug((k, 'pos. sl', CurrentNmode, Dkmax, Dkmin, RootEqn[CurrentNmode]))
-            CurrentNmode=CurrentNmode+1
+    toogle_doubling_samples = True
 
-        if (Dkmax<0.) and (Dkmin>0.):
-            RootEqn[CurrentNmode]=opt.fsolve(DispersionEqn,k,args=(a,b,n, epsilon, mu_r), xtol=1e-6)
-            logger.debug((k, 'neg. sl', CurrentNmode, Dkmax, Dkmin, RootEqn[CurrentNmode]))
-            CurrentNmode=CurrentNmode+1
+    while num_sign_changes < Nmode:
+        k_samples = np.linspace(k_lower, k_upper, num_k_sampling)
+        Dk_values = DispersionEqn(k_samples, a, b , n, epsilon, mu_r)
+        
+        # determine indices at which the sign changes and count them
+        asign = np.sign(Dk_values)
+        idx_sign_change = np.nonzero((np.roll(asign, 1) - asign) != 0)[0]
+        if idx_sign_change[0] == 0:
+            idx_sign_change = idx_sign_change[1:]
+        
+        num_sign_changes = idx_sign_change.shape[0]
+        # signchange[0] = 0
+        # n_sign_changes = np.sum(signchange)
+        # print(signchange)
+        logger.debug(f'number of sign changes in k-space interval: {num_sign_changes}')
 
-        k=k+k_step
+        # Switch between refining sampling of the interval and resizing the interval
+        # Only matters if the 'while'-criterion is not met
+        if toogle_doubling_samples:
+            logger.debug(f'doubling sampling points of k-space interval from {num_k_sampling} to {num_k_sampling * 2}')
+            num_k_sampling *= 2
+            toogle_doubling_samples = False
+        else:
+            logger.debug(f'Resizing k-space interval')
+            k_upper *=2
+            toogle_doubling_samples = True
+        
+        # termination criterion to prevent from endless loop
+        if num_k_sampling > 5e4:
+            logger.error(f'Termination criterion reached. Sampling size of k-space for root finding too large!')
+            return None
+    
+    idx_sign_change = idx_sign_change[:Nmode]
+    for i, (k_l, k_u) in enumerate(zip(k_samples[idx_sign_change - 1 ], k_samples[idx_sign_change - 1 ] )):
+        RootEqn[i]=opt.fsolve(DispersionEqn, 0.5*(k_l + k_u) , args=(a,b,n,epsilon, mu_r), xtol=1e-6)
+        if logger.level <= logging.DEBUG:
+            D_k_l = DispersionEqn(k_l, a, b , n, epsilon, mu_r)
+            D_k_u = DispersionEqn(k_u, a, b , n, epsilon, mu_r)
+            slope_str = 'pos. slope' if D_k_l < D_k_u else 'neg. slope'
+            logger.debug(((k_l, k_u), slope_str, i, D_k_l, D_k_u, RootEqn[i]))
+    logger.debug('All roots: '+repr(RootEqn))
 
 # get the amplitude of each mode and wavevector
 
     if n==0:
         NormalizationCGS2SI=4.0*qelec/(a*b*epsilon)/(4*math.pi*epsilon0)  # Eq 39
-        delta= a-b #relative to delta?
-        while np.any(np.abs(\
-            DispersionEqn(RootEqn+delta,a,b,n, epsilon, mu_r)-DispersionEqn(RootEqn,a,b,n, epsilon, mu_r)\
-                ))>1. :#if the difference between two DispersionEqns is not small enough, then make delta smaller
-            delta=delta/10.0
-        logger.debug(f'step for derivative = {delta}')
-# renormalize the field to the charge so units are now V/m/nC
-        D_s=(DispersionEqn(RootEqn+delta,a,b,n, epsilon, mu_r)- \
-             DispersionEqn(RootEqn,a,b,n, epsilon, mu_r))/delta/a # d/dx D(x) in Equation (4.11) in SI units
+        D_s = dDispersionEqn_dx_n0(RootEqn, a, b, epsilon, mu_r)
+        logger.debug(f'D_s = {D_s}')
         Field2wake=1.0/qelec
         RootAmplit=a*RootEqn*P_rg(RootEqn,a,b,n)/D_s*NormalizationCGS2SI*Field2wake
-        RootWavVec=RootEqn/(np.sqrt(epsilon*mu_r-1.0))
+        RootWavVec=RootEqn/(math.sqrt(epsilon*mu_r-1.0))
 
     if n>0:
         delta= a-b #relative to delta?
@@ -163,7 +239,6 @@ def FindMode(a,b,n,epsilon,Nmode, k_0=1, k_step=1, mu_r=1.):
         Field2wake=1.0/qelec
         RootAmplit=a*RootEqn*P_rg(RootEqn,a,b,n)*R_rg(RootEqn,a,b,n)/D_s*Field2wake
         RootWavVec=RootEqn/(np.sqrt(epsilon*mu_r-1.0))
-
 
 # renormalize the field to the charge so units are now V/m/NC
 
@@ -179,6 +254,7 @@ def FindMode(a,b,n,epsilon,Nmode, k_0=1, k_step=1, mu_r=1.):
     --------------------"""
     logger.info(summary_str)
     return(RootAmplit, RootWavVec)
+
 
 # ---------------- definition of distributions ----------------------------------------------
 #            the distribution are normalized to 1 C
@@ -269,8 +345,9 @@ def BunchDistP(zz, sigmaz):
 
 def BunchDistrib (Distribution, zz, sigmaz):
     '''
-    Evaluate the distribution with characteristic size `sigmaz` at the positions `zz`, centered around zero. The meaning of `sigmaz` depends on the chosen distribution. `zz` and `sigmaz` must have the same dimensions.
-    The unit of the distribution is 1/s, such that it is normalized to
+    Evaluate the distribution with characteristic size `sigmaz` at the positions `zz`, centered around zero.
+    The meaning of `sigmaz` depends on the chosen distribution. `zz` and `sigmaz` must have the same dimensions.
+    The unit of the distribution is 1/second, such that it is normalized to
     ```
     np.sum(MyBunch *dz/c) == 1
     ```
@@ -302,6 +379,8 @@ def BunchDistrib (Distribution, zz, sigmaz):
 #---------- for tracking purpose
 
 def Long_GreenFunction(RootAmplit, RootWavVec, r0,r, b, a, n, zmin, zmax,Nz,epsilon, mu_r=1):
+    assert b < a   # Ensure that the order of inner and outer radii is correct
+    assert r0 < b and r < b
     zz=np.linspace(zmin,zmax,Nz)
     WakeGreen=0.0*zz
     Nmode=len(RootAmplit)
@@ -319,7 +398,8 @@ def Trans_GreenFunction(RootAmplit, RootWavVec, r0,r, b, a, n, zmin, zmax,Nz,eps
     mu_r: float
        relative permeability of the dielectric
     '''
-
+    assert b < a   # Ensure that the order of inner and outer radii is correct
+    assert r0 < b and r < b
     zz=np.linspace(zmin,zmax,Nz)
     WakeGreen=0.0*zz
     Nmode=len(RootAmplit)
