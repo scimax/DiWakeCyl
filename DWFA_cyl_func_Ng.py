@@ -147,6 +147,9 @@ def FindMode(a,b,n,epsilon,Nmode, k_lower= None, k_upper=None, num_k_sampling=50
     -----
     The amplitudes and wavevectors refer to the terms of the sum in Eq. (3.9) or Eq. (5.3),
     depending on the angular mode index.
+    
+    **Important**: Check that the modes found are basically all by gradually increasing the 
+    number of sampling points in the k-space, `num_k_sampling`.
 
     '''
     # define internal variable for taking numerical derivative
@@ -379,6 +382,42 @@ def BunchDistrib (Distribution, zz, sigmaz):
 #---------- for tracking purpose
 
 def Long_GreenFunction(RootAmplit, RootWavVec, r0,r, b, a, n, zmin, zmax,Nz,epsilon, mu_r=1):
+    """
+    Single-mode Green's function of the longitudinal wake field, i.e. the wake field function. For the wake
+    potential it most be convolved with the longitudinal charge distribution and integrated along the z-coordinate.
+
+    Parameters
+    ----------
+    RootAmplit: ndarray of float,
+        One-dimensional array of shape (Nmode,) containing the amplitudes of the radial mode expansion for modes 
+        with a polar mode index `n`. Those are the amplitudes in the sums of Eq. (4.11) or (3.9), resp.
+        Retrieved from `FindModes`.
+    RootWavVec:
+        One-dimensional array of shape (Nmode,) containing the wavevectors of the radial mode expansion for modes 
+        with a polar mode index `n`. See sums of Eq. (4.11) or (3.9), resp.
+        Retrieved from `FindModes`.
+    r0: float
+        Position of the leading source particle (Dirac delta function) exciting the wake. In meter.
+    r: float
+        Position of the trailing particle (Dirac delta function) on which the wake acts. In meter.
+    b: float
+        Inner radius of the dielectric lined waveguide. In meter
+    a: float
+        Outer radius of the dielectric lined waveguide. In meter
+    n: int
+        polar mode index
+    zmin: float
+        lower boundary of the z-interval over which the wake is computed
+    zmax: float
+        upper boundary of the z-interval over which the wake is computed
+    Nz: integer
+        number of sampling points of the z-interval over which the wake is computed 
+    epsilon: float
+        dielectric permittivity of the dielectric lined waveguide 
+    mu_r: float, optional
+        permeability of the dielectric lined waveguide.
+    
+    """
     assert b < a   # Ensure that the order of inner and outer radii is correct
     assert r0 < b and r < b
     zz=np.linspace(zmin,zmax,Nz)
@@ -392,6 +431,71 @@ def Long_GreenFunction(RootAmplit, RootWavVec, r0,r, b, a, n, zmin, zmax,Nz,epsi
         if n==0:
             WakeGreen= WakeGreen + RootAmplit[i]*np.cos(RootWavVec[i]*zz)  #equation (3.9) in Ng paper
     return zz, WakeGreen
+
+def multimode_long_greens_function(RootAmplit, RootWavVec, m_modes, r0, r, theta, zmin, zmax, Nz, b, a, epsilon, mu_r=1):
+    """
+    Longitudinal multimode Green's function, i. e. the wake field function (in V/ ( m C )  ).
+
+    Parameters
+    ----------
+    RootAmplit: ndarray of float,
+        Two-dimensional array of shape (Mmode, Nmode) containing the amplitudes of the mode expansion. The row index 
+        iterates to the polar mode index, the column index iterates the radial mode index. For each polar mode index 
+        the amplitudes and wavevectors are computed with `FindModes`. The radial mode expansion in the radial index is given 
+        in Eq. (4.11) or (3.9), resp. The polar mode expansion is given in Eq. (2.9).
+    RootWavVec:
+        Two-dimensional array of shape (Mmode, Nmode) containing the wave vectors of the mode expansion
+    m_modes: ndarray of type int
+        One-dimensional array of shape (Mmode,), containing the polar mode indices taken into account in the
+        polar mode expansion, Eq. (2.9).
+    r0: float
+        Position of the leading source particle (Dirac delta function) exciting the wake. In meter.
+    r: float
+        Position of the trailing particle (Dirac delta function) on which the wake acts. In meter.
+    theta: float
+        Polar angle between leading and trailing particle in the cross-sectional plane. In radian.
+    zmin: float
+        lower boundary of the z-interval over which the wake is computed
+    zmax: float
+        upper boundary of the z-interval over which the wake is computed
+    Nz: integer
+        number of sampling points of the z-interval over which the wake is computed 
+    b: float
+        Inner radius of the dielectric lined waveguide. In meter.
+    a: float
+        Outer radius of the dielectric lined waveguide. In meter.
+    epsilon: float
+        dielectric permittivity of the dielectric lined waveguide 
+    mu_r: float, optional
+        permeability of the dielectric lined waveguide.
+    """
+    z_wake_func = np.zeros(Nz)
+    long_wake_func = np.zeros(Nz)
+
+    kwargs= {
+                    "b": b, "a" : a, "zmin": zmin, "zmax" : zmax,
+                    "Nz": Nz, "epsilon": epsilon
+                } 
+    for i, m in enumerate(m_modes):        
+        kwargs["RootAmplit"] = RootAmplit[i]
+        kwargs["RootWavVec"] = RootWavVec[i]
+        kwargs["n"] = m
+        kwargs["r0"] = r0
+        kwargs["r"] = r
+        logger.debug(f"Computing longitudinal wake potential function between z=0 and z={zmax}\n"+
+                     f"with {m_modes.shape[0]} angular modes.")
+        z_wake_func_temp, long_wake_func_temp = Long_GreenFunction(**kwargs)
+        long_wake_func_temp *= np.cos(m * theta) 
+        z_wake_func[:] = z_wake_func_temp
+        long_wake_func[:] += long_wake_func_temp
+
+    return z_wake_func, long_wake_func
+    # wake potential function from wake field function
+    pot_long_func = long_wake_func*(l_dlw - z_wake_func )
+    # wake potential from wake potential function and bunch profile
+    z_wake, long_wake_pot = WakePotential(BunchDistG, pot_long_func, z_wake_func, σ_z)
+    return np.vstack((z_wake, long_wake_pot*1e-12))
+
 
 def Trans_GreenFunction(RootAmplit, RootWavVec, r0,r, b, a, n, zmin, zmax,Nz,epsilon, mu_r=1):
     '''
@@ -414,6 +518,65 @@ def Trans_GreenFunction(RootAmplit, RootWavVec, r0,r, b, a, n, zmin, zmax,Nz,eps
         WakeGreen=WakeGreen+RootAmplit[i]/(RootWavVec[i]*np.sqrt(epsilon*mu_r-1.0)*a) * np.sin(RootWavVec[i]*zz)*NormalizationCGS2SI #equation (5.3), RootWavVec=RootEqn/(np.sqrt(epsilon*mu-1.0)) RootAmplit=a*RootEqn*P_rg(RootEqn,a,b,n)*R_rg(RootEqn,a,b,n)/D_s*Field2wake
     WakeGreen=WakeGreen/qelec#missing mu here ,different from equation (4.12)?
     return zz, WakeGreen
+
+def multimode_trans_greens_function(RootAmplit, RootWavVec, m_modes, r0, r, theta, zmin, zmax, Nz, b, a, epsilon, mu_r=1):
+    """
+    Transverse multimode Green's function, i. e. the wake field function (in V/ ( m C )  ), depending on the longitudinal position. Note that the transverse wake function is a vector in cylindrical coordinates. The returned array is two-dimensional, where the first row is the radial component, and the second row is the polar component.
+
+    Parameters
+    ----------
+    RootAmplit: ndarray of float,
+        Two-dimensional array of shape (Mmode, Nmode) containing the amplitudes of the mode expansion. The row index 
+        iterates to the polar mode index, the column index iterates the radial mode index. For each polar mode index 
+        the amplitudes and wavevectors are computed with `FindModes`. The radial mode expansion in the radial index is given 
+        in Eq. (4.11) or (3.9), resp. The polar mode expansion is given in Eq. (2.9).
+    RootWavVec:
+        Two-dimensional array of shape (Mmode, Nmode) containing the wave vectors of the mode expansion
+    m_modes: ndarray of type int
+        One-dimensional array of shape (Mmode,), containing the polar mode indices taken into account in the
+        polar mode expansion, Eq. (2.9).
+    r0: float
+        Position of the leading source particle (Dirac delta function) exciting the wake. In meter.
+    r: float
+        Position of the trailing particle (Dirac delta function) on which the wake acts. In meter.
+    theta: float
+        Polar angle between leading and trailing particle in the cross-sectional plane. In radian.
+    zmin: float
+        lower boundary of the z-interval over which the wake is computed
+    zmax: float
+        upper boundary of the z-interval over which the wake is computed
+    Nz: integer
+        number of sampling points of the z-interval over which the wake is computed 
+    b: float
+        Inner radius of the dielectric lined waveguide. In meter.
+    a: float
+        Outer radius of the dielectric lined waveguide. In meter.
+    epsilon: float
+        dielectric permittivity of the dielectric lined waveguide 
+    mu_r: float, optional
+        permeability of the dielectric lined waveguide.
+    """
+    z_wake_func = np.zeros(Nz)
+    trans_wake_func = np.zeros(Nz)
+
+    kwargs= {
+                    "b": b, "a" : a, "zmin": zmin, "zmax" : zmax,
+                    "Nz": Nz, "epsilon": epsilon, "mu_r": mu_r 
+                } 
+    for i, m in enumerate(m_modes):        
+        kwargs["RootAmplit"] = RootAmplit[i]
+        kwargs["RootWavVec"] = RootWavVec[i]
+        kwargs["n"] = m
+        kwargs["r0"] = r0
+        kwargs["r"] = r
+        logger.debug(f"Computing longitudinal wake potential function between z=0 and z={zmax}\n"+
+                     f"with {m_modes.shape[0]} angular modes.")
+        z_wake_func_temp, trans_wake_func_temp = Trans_GreenFunction(**kwargs)
+        trans_wake_func_temp *= np.cos(m * theta) 
+        z_wake_func[:] = z_wake_func_temp
+        trans_wake_func[:] += trans_wake_func_temp
+
+    return z_wake_func, trans_wake_func
 
 def WakePotential (Distribution, WakeGreen, zz, sigmaz):
     zzmean=np.mean(zz)
