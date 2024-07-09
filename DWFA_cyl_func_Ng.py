@@ -497,7 +497,23 @@ def multimode_long_greens_function(RootAmplit, RootWavVec, m_modes, r0, r, theta
     return np.vstack((z_wake, long_wake_pot*1e-12))
 
 
-def Trans_GreenFunction(RootAmplit, RootWavVec, r0,r, b, a, n, zmin, zmax,Nz,epsilon, mu_r=1):
+def Trans_GreenFunction(RootAmplit, RootWavVec, r0,r, b, a, n, zmin, zmax, Nz,epsilon, mu_r=1, mode=None):
+    if mode == 'legacy':
+        logger.warning(f"Using legacy version of `Trans_GreenFunction`")
+        return Trans_GreenFunction_legacy(RootAmplit, RootWavVec, r0,r, b, a, n, zmin, zmax, Nz,epsilon, mu_r=mu_r)
+    else:
+        assert b < a   # Ensure that the order of inner and outer radii is correct
+        assert r0 < b and r < b
+        logger.debug(f"Using numpy-style version of `Trans_GreenFunction`")
+
+        zz=np.linspace(zmin,zmax,Nz)  # shape (Nz,)
+        NormalizationCGS2SI=qelec*qelec/(a*a)*  (r0/a)**n  *(r/a)**(n-1)  *8.0*n*np.sqrt(epsilon-1.0)/(b/a)**(2.0*n) /(4*math.pi*epsilon0) 
+
+        WakeGreen = np.sum((RootAmplit/(RootWavVec * np.sqrt(epsilon * mu_r - 1.0)*a))[:, np.newaxis] * np.sin(np.outer(RootWavVec, zz)), axis=0)
+        WakeGreen *= NormalizationCGS2SI/qelec
+        return zz, WakeGreen
+
+def Trans_GreenFunction_legacy(RootAmplit, RootWavVec, r0,r, b, a, n, zmin, zmax, Nz,epsilon, mu_r=1):
     '''
     mu_r: float
        relative permeability of the dielectric
