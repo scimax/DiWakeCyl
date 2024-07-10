@@ -535,7 +535,7 @@ def Trans_GreenFunction_legacy(RootAmplit, RootWavVec, r0,r, b, a, n, zmin, zmax
     WakeGreen=WakeGreen/qelec#missing mu here ,different from equation (4.12)?
     return zz, WakeGreen
 
-def multimode_trans_greens_function(RootAmplit, RootWavVec, m_modes, r0, r, theta, zmin, zmax, Nz, b, a, epsilon, mu_r=1):
+def multimode_trans_greens_function_legacy(RootAmplit, RootWavVec, m_modes, r0, r, theta, zmin, zmax, Nz, b, a, epsilon, mu_r=1):
     """
     Transverse multimode Green's function, i. e. the wake field function (in V/ ( m C )  ), depending on the longitudinal position. Note that the transverse wake function is a vector in cylindrical coordinates. The returned array is two-dimensional, where the first row is the radial component, and the second row is the polar component.
 
@@ -571,6 +571,23 @@ def multimode_trans_greens_function(RootAmplit, RootWavVec, m_modes, r0, r, thet
         dielectric permittivity of the dielectric lined waveguide 
     mu_r: float, optional
         permeability of the dielectric lined waveguide.
+
+    See Also
+    --------
+    multimode_trans_greens_function : A much faster reimplementation than the legacy version.
+
+    Example
+    -------
+    `mode_ampl` and `mode_wave_vec` were already calculated via `FindModes` with the same parameters for the radii
+    and the dielectric permittivity. Here, they both have shape (7,8).
+    >>> multimode_trans_greens_function_legacy(mode_ampl, mode_wave_vec, m_modes = np.arange(1,8), 
+    ...     r0=0.45e-3, r= 0.4e-3, theta= np.deg2rad(10), 
+    ...     zmin= 0, zmax=10e-3, Nz=6, 
+    ...     b = 0.69e-3, a= 1.29e-3, epsilon= 9.6)
+    (array([0.   , 0.002, 0.004, 0.006, 0.008, 0.01 ]),
+     array([ 0.00000000e+00,  1.62490024e+15, -1.67036058e+16,  2.84819256e+15,
+            -5.01866119e+15,  3.10961432e+14]))
+
     """
     z_wake_func = np.zeros(Nz)
     trans_wake_func = np.zeros(Nz)
@@ -587,12 +604,94 @@ def multimode_trans_greens_function(RootAmplit, RootWavVec, m_modes, r0, r, thet
         kwargs["r"] = r
         logger.debug(f"Computing longitudinal wake potential function between z=0 and z={zmax}\n"+
                      f"with {m_modes.shape[0]} angular modes.")
-        z_wake_func_temp, trans_wake_func_temp = Trans_GreenFunction(**kwargs)
+        z_wake_func_temp, trans_wake_func_temp = Trans_GreenFunction(**kwargs, mode='legacy')
         trans_wake_func_temp *= np.cos(m * theta) 
         z_wake_func[:] = z_wake_func_temp
         trans_wake_func[:] += trans_wake_func_temp
 
     return z_wake_func, trans_wake_func
+
+def multimode_trans_greens_function(RootAmplit, RootWavVec, m_modes, r0, r, theta, zmin, zmax, Nz, b, a, epsilon, mu_r=1, mode=None):
+    """
+    Transverse multimode Green's function, i. e. the wake field function (in V/ ( m C )  ), depending on the longitudinal position. Note that the transverse wake function is a vector in cylindrical coordinates. The returned array is two-dimensional, where the first row is the radial component, and the second row is the polar component.
+
+    Parameters
+    ----------
+    RootAmplit: ndarray of float,
+        Two-dimensional array of shape (Mmode, Nmode) containing the amplitudes of the mode expansion. The row index 
+        iterates to the polar mode index, the column index iterates the radial mode index. For each polar mode index 
+        the amplitudes and wavevectors are computed with `FindModes`. The radial mode expansion in the radial index is given 
+        in Eq. (4.11) or (3.9), resp. The polar mode expansion is given in Eq. (2.9).
+    RootWavVec:
+        Two-dimensional array of shape (Mmode, Nmode) containing the wave vectors of the mode expansion
+    m_modes: ndarray of type int
+        One-dimensional array of shape (Mmode,), containing the polar mode indices taken into account in the
+        polar mode expansion, Eq. (2.9).
+    r0: float
+        Position of the leading source particle (Dirac delta function) exciting the wake. In meter.
+    r: float
+        Position of the trailing particle (Dirac delta function) on which the wake acts. In meter.
+    theta: float
+        Polar angle between leading and trailing particle in the cross-sectional plane. In radian.
+    zmin: float
+        lower boundary of the z-interval over which the wake is computed
+    zmax: float
+        upper boundary of the z-interval over which the wake is computed
+    Nz: integer
+        number of sampling points of the z-interval over which the wake is computed 
+    b: float
+        Inner radius of the dielectric lined waveguide. In meter.
+    a: float
+        Outer radius of the dielectric lined waveguide. In meter.
+    epsilon: float
+        dielectric permittivity of the dielectric lined waveguide 
+    mu_r: float, optional
+        permeability of the dielectric lined waveguide.
+    mode: {None, 'legacy'}
+        If 'legacy', the for-loop based approach is used.
+
+    Example
+    -------
+    `mode_ampl` and `mode_wave_vec` were already calculated via `FindModes` with the same parameters for the radii
+    and the dielectric permittivity. Here, they both have shape (7,8).
+    >>> multimode_trans_greens_function(mode_ampl, mode_wave_vec, m_modes = np.arange(1,8), 
+    ...     r0=0.45e-3, r= 0.4e-3, theta= np.deg2rad(10), 
+    ...     zmin= 0, zmax=10e-3, Nz=6, 
+    ...     b = 0.69e-3, a= 1.29e-3, epsilon= 9.6)
+    (array([0.   , 0.002, 0.004, 0.006, 0.008, 0.01 ]),
+     array([ 0.00000000e+00,  1.62490024e+15, -1.67036058e+16,  2.84819256e+15,
+            -5.01866119e+15,  3.10961432e+14]))
+    """
+
+    if mode == 'legacy':
+        logger.warning(f"Using legacy version of `multimode_trans_greens_function`")
+        return multimode_trans_greens_function_legacy(RootAmplit, RootWavVec, m_modes, r0, r, theta, zmin, zmax, Nz, b, a, epsilon, mu_r=mu_r)
+    
+        # return Trans_GreenFunction_legacy(RootAmplit, RootWavVec, r0,r, b, a, n, zmin, zmax, Nz,epsilon, mu_r=mu_r)
+    else:
+        assert b < a   # Ensure that the order of inner and outer radii is correct
+        assert r0 < b and r < b
+        logger.debug(f"Using numpy-style version of `multimode_trans_greens_function`")
+
+        zz=np.linspace(zmin,zmax,Nz)  # shape (Nz,)
+        NormalizationCGS2SI = qelec*qelec/(a * a)*  (r0/a)** m_modes  * (r/a)**(m_modes - 1)  *8.0* m_modes *np.sqrt(epsilon-1.0)/(b/a)**(2.0*m_modes) /(4*math.pi*epsilon0)   # shape (Mmode,)
+
+        WakeGreen_summands_per_m_mode = (
+            ((RootAmplit/(RootWavVec*np.sqrt(epsilon * mu_r - 1.0)*a))[:, :, np.newaxis]) *  # shape (Mmode, Nmode, 1)
+            np.sin(np.multiply.outer(RootWavVec, zz)))                                       # shape (Mmode, Nmode, Nz)
+        
+        # summation over the radial mode index
+        WakeGreen_per_m_mode = np.sum(WakeGreen_summands_per_m_mode, axis=1) # shape (Mmode, Nz)
+
+        geometric_factors_per_m_mode = (np.cos(m_modes * theta) * NormalizationCGS2SI)[:, np.newaxis]  # shape (Mmode,1)
+        
+        # summation over the angular mode index
+        transverse_wake_func = np.sum(geometric_factors_per_m_mode * WakeGreen_per_m_mode, axis=0)  
+        transverse_wake_func /= qelec
+
+        return zz, transverse_wake_func
+    
+
 
 def WakePotential (Distribution, WakeGreen, zz, sigmaz):
     zzmean=np.mean(zz)

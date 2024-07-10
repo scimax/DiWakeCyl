@@ -8,9 +8,7 @@ logging.basicConfig( #filename='{:%Y-%m-%dT%H%M%S}.log'.format(datetime.now()),
 # child logger for local use
 logger = logging.getLogger(__name__ + '.nb')
 logger.setLevel(logging.DEBUG)
-
-def printl(*args, sep=' '):
-    logging.info(sep.join([str(val) for val in args]) )
+logging.getLogger('DWFA_cyl_func_Ng').setLevel(logging.ERROR)
 
 import sys, os
 import numpy as np
