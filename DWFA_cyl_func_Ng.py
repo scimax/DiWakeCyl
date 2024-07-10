@@ -691,7 +691,81 @@ def multimode_trans_greens_function(RootAmplit, RootWavVec, m_modes, r0, r, thet
 
         return zz, transverse_wake_func
     
+def multimode_multipos_trans_greens_function(RootAmplit, RootWavVec, m_modes, r_source, r_trailing, z_pos, b, a, epsilon, mu_r=1, theta=None):
+    """Compute the transverse wake field function (in units of V/(m C), depending on the radial positions of the source and the trailing particles, and the intrabunch longitudinal position, i.e. w_t(r_s, r_t, z). Currently, the bunch extent is restricted to 2D, neglecting the angular position.
 
+    Parameters
+    ----------
+    RootAmplit: (Mmode, Nmode) array_like
+        Two-dimensional array of shape (Mmode, Nmode) containing the amplitudes of the mode expansion. The row index 
+        iterates to the polar mode index, the column index iterates the radial mode index. For each polar mode index 
+        the amplitudes and wavevectors are computed with `FindModes`. The radial mode expansion in the radial index is given 
+        in Eq. (4.11) or (3.9), resp. The polar mode expansion is given in Eq. (2.9).
+    RootWavVec: (Mmode, Nmode) array_like
+        Two-dimensional array of shape (Mmode, Nmode) containing the wave vectors of the mode expansion
+    m_modes: ndarray of type int
+        One-dimensional array of shape (Mmode,), containing the polar mode indices taken into account in the
+        polar mode expansion, Eq. (2.9).
+    r_source, r_trailing : (Nr,) array_like
+        Radial positions `r_trailing` at which the the trailing particle observes the wake of the leading source particle, located at `r_source`. 
+    z_pos: (Nz,) array_like
+        Longitudinal intrabunch position, at which the wake field function is computed.
+    b: float
+        Inner radius of the dielectric lined waveguide. In meter.
+    a: float
+        Outer radius of the dielectric lined waveguide. In meter.
+    epsilon: float
+        dielectric permittivity of the dielectric lined waveguide 
+    mu_r: float, optional
+        permeability of the dielectric lined waveguide.
+    theta : float, optional
+        *Currently not supported*
+
+    Returns
+    -------
+    transverse_wake_func: (Nr, Nr, Nz) ndarray
+        wake field function depending on source particle radial position, trailing particle radial position, and l
+        ongitudinal intrabunch position. The indexing axes are in order of `r_source`, `r_trailing`, `z_pos`.
+    
+    Note
+    ----
+    - This function heavily relies on numpy broadcasting. If you are not familiar with it, please have a look at https://numpy.org/doc/stable/user/basics.broadcasting.html
+
+    """
+    if theta:
+        raise NotImplementedError('Only the two-dimensional extent of the beam is considered, in r-z plane. The angular position is not taken into account yet.')
+    assert b < a   # Ensure that the order of inner and outer radii is correct
+    # This check increases the computation time by about a factor of 4
+    # TODO: add flag which disables the check
+    assert np.all(np.logical_and(r_source < b, r_trailing < b))
+
+    # This is the constant prefactor in the sum of Eq. (5.3) and the prefactor of Eq. (5.4), assuming constant radii and constant mode index m.
+    # Since both radii and mode index are not constant, this is split up into three parts: a scalar part, an m-only dependent part, and a m- and r-dependent part.
+    # NormalizationCGS2SI = qelec*qelec/(a * a)*  (r0/a)** m_modes  * (r/a)**(m_modes - 1)  *8.0* m_modes *np.sqrt(epsilon-1.0)/(b/a)**(2.0*m_modes) /(4*math.pi*epsilon0)   # shape (Mmode,)
+    
+    NormalizationCGS2SI = qelec*qelec/(a * a)*np.sqrt(epsilon-1.0) * 8.0/(4*math.pi*epsilon0)   # shape ()
+    prefactor_m_dependent =  m_modes /(b/a)**(2.0*m_modes)                                      # shape (Mmode,)  , m-only-dependent prefactor in Eq. (5.4)
+    # TODO: in principle, `prefactor_m_dependent` can be extended for the angles by np.cos(m_modes * theta)
+    power_factors = (
+        np.power.outer(r_source/a, m_modes)[:, np.newaxis, :] * 
+        np.power.outer(r_trailing/a, m_modes-1)[np.newaxis,:,:]
+    )  # shape (Nr, Nrt, Nmode)
+    logger.debug('NormalizationCGS2SI.shape, prefactor_m_dependent.shape, power_factors.shape: ')
+    logger.debug('    ' + str((NormalizationCGS2SI.shape, prefactor_m_dependent.shape, power_factors.shape)))
+
+    # summands in Eq. (5.3) excluding n-independent (n=λ) pre-factors from Eq. (5.4)
+    WakeGreen_summands_per_m_mode = (
+            ((RootAmplit/(RootWavVec*np.sqrt(epsilon * mu_r - 1.0)*a))[:, :, np.newaxis]) *     # shape (Mmode, Nmode, 1)
+            np.sin(np.multiply.outer(RootWavVec, z_pos)))                                       # shape (Mmode, Nmode, Nz)
+    # summation over the radial mode index
+    WakeGreen_per_m_mode = np.sum(WakeGreen_summands_per_m_mode, axis=1) # shape (Mmode, Nz)
+
+    # each z-position must be multiplied by the prefactor which depends on the source radial position, on the trailing radial position, and the angular mode index m
+    transverse_wake_func_2d = np.sum(
+        (prefactor_m_dependent * power_factors)[:, :, :, np.newaxis] * WakeGreen_per_m_mode,    # shape (Nr, Nrt, Nmode, Nz)
+        axis=2)   # summation over mode index m                                                 # shape (Nr, Nrt, Nz)
+    transverse_wake_func_2d *= (NormalizationCGS2SI/qelec)
+    return transverse_wake_func_2d
 
 def WakePotential (Distribution, WakeGreen, zz, sigmaz):
     zzmean=np.mean(zz)
